@@ -14,6 +14,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -26,31 +27,39 @@ type PoeGPT struct {
 	wsReopenChan                               chan bool
 	lastAskRequest                             *AskRequest
 	cookie                                     string
-	channel                                    string
-	formKey                                    string
+	cookieMap                                  map[string]string
+	setting                                    *GetSettingResponse
 }
 
 func NewPoeGPT(parentMessageID string, messageConsumer *messageQueue.ConsumerConfigure) *PoeGPT {
+	log.Debug("start poe gpt")
+
 	poeGPT := &PoeGPT{
 		MessageBus:      messageQueue.NewMemoryMessageQueue("Poe", messageQueue.ModeChan),
-		PoeURl:          "https://Poe.khanh.lol/completion",
 		ParentMessageID: parentMessageID,
 		ConversationID:  "poe",
 		wsOpen:          false,
 		wsReopenChan:    make(chan bool),
+		cookieMap:       make(map[string]string),
 	}
 
 	cookie := os.Getenv("POE_COOKIE")
 	if cookie == "" {
 		log.PanicAndStopWorld("init POE configuration wrong, cookie is empty")
 	}
-
 	poeGPT.cookie = cookie
+
+	poeChannel := os.Getenv("POE_CHANNEL")
+	if poeChannel == "" {
+		log.PanicAndStopWorld("init POE configuration wrong, cookie is empty")
+	}
+
 	_, _, _, _, err := poeGPT.GetSettings()
 	if err != nil {
-		log.PanicAndStopWorld("init POE configuration wrong ", err)
+		log.PanicAndStopWorld("init setting wrong ", err)
 		return nil
 	}
+	log.Debug("get settings success")
 
 	poeGPT.MessageBus.AddConsumer(messageConsumer)
 	go poeGPT.ReOpenWsClient()
@@ -101,7 +110,7 @@ func (poe *PoeGPT) SetParentMessageID(parentMessageID string) {
 
 func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessage, error) {
 	//TODO implement me
-
+	log.Debug("new question:" + askRequest.Question)
 	type Variables struct {
 		Bot           string      `json:"bot"`
 		ChatID        int         `json:"chatId"`
@@ -114,31 +123,20 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 		Query         string    `json:"query"`
 		Variables     Variables `json:"variables"`
 	}
-	payLodTemp := `
-	{
-  "operationName": "AddHumanMessageMutation",
-  "query": "mutation AddHumanMessageMutation($chatId: BigInt!, $bot: String!, $query: String!, $source: MessageSource, $withChatBreak: Boolean! = false) {\n  messageEdgeCreate(\n    chatId: $chatId\n    bot: $bot\n    query: $query\n    source: $source\n    withChatBreak: $withChatBreak\n  ) {\n    __typename\n    message {\n      __typename\n      node {\n        __typename\n        ...MessageFragment\n        chat {\n          __typename\n          id\n          shouldShowDisclaimer\n        }\n      }\n    }\n    chatBreak {\n      __typename\n      node {\n        __typename\n        ...MessageFragment\n      }\n    }\n  }\n}\nfragment MessageFragment on Message {\n  id\n  __typename\n  messageId\n  text\n  linkifiedText\n  authorNickname\n  state\n  vote\n  voteReason\n  creationTime\n  suggestedReplies\n}",
-  "variables": {
-    "bot": "capybara",
-    "chatId": 550922,
-    "query": "现在还记得吗？\n",
-    "source": null,
-    "withChatBreak": false
-  }
-}
-`
 
 	var payload Payload
 
-	json.Unmarshal([]byte(payLodTemp), &payload)
+	json.Unmarshal([]byte(payLoadForTalk), &payload)
 
+	payload.Variables.ChatID, _ = strconv.Atoi(os.Getenv("POV_CHAT_ID"))
 	payload.Variables.Query = askRequest.Question
 
 	payloadBytes, err := json.Marshal(payload)
 	body := bytes.NewReader(payloadBytes)
-	resp, err := poe.Request(body)
+	url := "https://poe.com/api/gql_POST"
+	resp, err := poe.PoeRequest("POST", url, body)
 	if err != nil {
-		log.Error(err, "请求错误")
+		log.Error("http request error", err)
 		poe.MessageBus.Publish(&messageQueue.Message{
 			Id: time.Now().UnixNano(),
 			MessageEntry: &GptMessage{
@@ -150,7 +148,8 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		log.Error("statusCode is not 200")
+		str, _ := io.ReadAll(resp.Body)
+		log.Error("statusCode is not 200", resp.StatusCode, string(str))
 		poe.MessageBus.Publish(&messageQueue.Message{
 			Id: time.Now().UnixNano(),
 			MessageEntry: &GptMessage{
@@ -161,6 +160,9 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 		return nil, err
 	}
 
+	str, _ := ioutil.ReadAll(resp.Body)
+
+	log.Debug("answer:", string(str))
 	defer resp.Body.Close()
 	poe.lastAskRequest = askRequest
 
@@ -171,7 +173,7 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 	}
 
 	return nil, nil
-	////http request
+	//although we can poll http request to get the response, but it respond till got entire response
 	//var poeHistoryNode PoeHistoryNode
 	//for {
 	//	resp, err := poe.GetHistory()
@@ -210,7 +212,6 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 	//})
 	//
 	//poe.ParentMessageID = fmt.Sprintf("%d", poeHistoryNode.MessageId)
-	////temp 临时如此处理
 	//poe.MessageID = fmt.Sprintf("%d", poeHistoryNode.MessageId)
 	//poe.ConversationID = "poe"
 	//
@@ -218,104 +219,43 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 }
 
 func (poe *PoeGPT) GetHistory() (*PoeGetHistoryMessage, error) {
-
-	type Payload struct {
-		OperationName string `json:"operationName"`
-		Query         string `json:"query"`
-		Variables     struct {
-			Before interface{} `json:"before"`
-			Bot    string      `json:"bot"`
-			Last   int         `json:"last"`
-		} `json:"variables"`
-	}
-
-	payLodTemp := `
-	{
-  "operationName": "ChatPaginationQuery",
-  "query": "query ChatPaginationQuery($bot: String!, $before: String, $last: Int! = 10) {\n  chatOfBot(bot: $bot) {\n    id\n    __typename\n    messagesConnection(before: $before, last: $last) {\n      __typename\n      pageInfo {\n        __typename\n        hasPreviousPage\n      }\n      edges {\n        __typename\n        node {\n          __typename\n          ...MessageFragment\n        }\n      }\n    }\n  }\n}\nfragment MessageFragment on Message {\n  id\n  __typename\n  messageId\n  text\n  linkifiedText\n  authorNickname\n  state\n  vote\n  voteReason\n  creationTime\n  suggestedReplies\n}",
-  "variables": {
-    "before": null,
-    "bot": "capybara",
-    "last": 20
-  }
-}
-`
-	var payload Payload
-
-	json.Unmarshal([]byte(payLodTemp), &payload)
+	payload := PoeGetHistoryPayload{}
+	json.Unmarshal([]byte(payLoadForGetHistory), &payload)
 
 	payload.Variables.Last = 1
 	payloadBytes, _ := json.Marshal(payload)
 	body := bytes.NewReader(payloadBytes)
-
-	resp, err := poe.Request(body)
+	url := "https://poe.com/api/gql_POST"
+	resp, err := poe.PoeRequest("POST", url, body)
 	if err != nil {
-		log.Error(err, "请求错误")
+		log.Error("request err", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Error("statusCode is not 200")
+		log.Error("statusCode is not 200", resp.StatusCode)
 		return nil, errors.New("statusCode is not 200")
 	}
 	respB, _ := ioutil.ReadAll(resp.Body)
 
 	respJson := PoeGetHistoryMessage{}
 
-	json.Unmarshal(respB, &respJson)
+	err = json.Unmarshal(respB, &respJson)
+	if err != nil {
+		log.Error("json unmarshal error", err)
+		return nil, err
+	}
 
 	return &respJson, nil
 }
 
-type WsMessage struct {
-	Messages []string `json:"messages"`
-	MinSeq   int64    `json:"min_seq"`
-}
-
-type WsMessageStringToJson struct {
-	MessageType string `json:"message_type"`
-	Payload     struct {
-		UniqueID         string `json:"unique_id"`
-		SubscriptionName string `json:"subscription_name"`
-		Data             struct {
-			MessageAdded struct {
-				ID               string      `json:"id"`
-				MessageID        int         `json:"messageId"`
-				CreationTime     int64       `json:"creationTime"`
-				State            string      `json:"state"`
-				Text             string      `json:"text"`
-				Author           string      `json:"author"`
-				LinkifiedText    string      `json:"linkifiedText"`
-				SuggestedReplies []string    `json:"suggestedReplies"`
-				Vote             interface{} `json:"vote"`
-				VoteReason       interface{} `json:"voteReason"`
-			} `json:"messageAdded"`
-		} `json:"data"`
-	} `json:"payload"`
-}
-
-var wsMessage *WsMessage
-var wsMessageStringToJson *WsMessageStringToJson
+var wsMessage *poeWsMessage
+var wsMessageStringToJson *poeWsMessageStringToJson
 
 func (poe *PoeGPT) GetSettings() (seq string, hash string, boxName string, channel string, err error) {
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET", "https://poe.com/api/settings?channel=poe-chan51-8888-hhmpqzuksgonnzdwnitj", nil)
-	req.Header.Set("authority", "poe.com")
-	req.Header.Set("accept", "*/*")
-	req.Header.Set("accept-language", "zh-CN,zh;q=0.9")
-	req.Header.Set("cache-control", "no-cache")
-	req.Header.Set("cookie", poe.cookie)
-	req.Header.Set("pragma", "no-cache")
-	req.Header.Set("referer", "https://poe.com/sage")
-	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="100", "Google Chrome";v="100"`)
-	req.Header.Set("sec-ch-ua-mobile", "?0")
-	req.Header.Set("sec-ch-ua-platform", `"macOS"`)
-	req.Header.Set("sec-fetch-dest", "empty")
-	req.Header.Set("sec-fetch-mode", "cors")
-	req.Header.Set("sec-fetch-site", "same-origin")
-	req.Header.Set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
-	resp, err := client.Do(req)
+	url := fmt.Sprintf("https://poe.com/api/settings?channel=%s", os.Getenv("POE_CHANNEL"))
+	resp, err := poe.PoeRequest("GET", url, nil)
 	if err != nil {
 		log.Error(err)
 		return "", "", "", "", err
@@ -323,31 +263,20 @@ func (poe *PoeGPT) GetSettings() (seq string, hash string, boxName string, chann
 	defer resp.Body.Close()
 	bodyText, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Error(err)
 		return "", "", "", "", err
 	}
-	type GetSeqResponse struct {
-		Formkey      string `json:"formkey"`
-		TchannelData struct {
-			MinSeq          string `json:"minSeq"`
-			Channel         string `json:"channel"`
-			ChannelHash     string `json:"channelHash"`
-			BoxName         string `json:"boxName"`
-			BaseHost        string `json:"baseHost"`
-			TargetUrl       string `json:"targetUrl"`
-			EnableWebsocket bool   `json:"enableWebsocket"`
-		} `json:"tchannelData"`
+	var getSeqResponse GetSettingResponse
+	err = json.Unmarshal(bodyText, &getSeqResponse)
+	if err != nil {
+		return "", "", "", "", err
 	}
-	var getSeqResponse GetSeqResponse
-	json.Unmarshal(bodyText, &getSeqResponse)
 	//to int64
 	//strings.
 	seq = getSeqResponse.TchannelData.MinSeq
 	hash = getSeqResponse.TchannelData.ChannelHash
 	boxName = getSeqResponse.TchannelData.BoxName
 	channel = getSeqResponse.TchannelData.Channel
-	poe.formKey = getSeqResponse.Formkey
-	poe.channel = channel
+	poe.setting = &getSeqResponse
 	return
 }
 
@@ -357,18 +286,15 @@ func (poe *PoeGPT) PoeWsClient() bool {
 	littleLock.Lock()
 	defer littleLock.Unlock()
 	if poe.wsOpen {
-		log.Info("WebSocket is already open")
+		log.Debug("WebSocket is already open")
 		return poe.wsOpen
 	}
-	log.Info("WebSocket is not open, start to open it")
-	seq, hash, boxname, channel, err := poe.GetSettings()
-	if err != nil {
-		return false
-	}
-	wsMessage = &WsMessage{}
-	wsMessageStringToJson = &WsMessageStringToJson{}
-	url := fmt.Sprintf("wss://tch%d.tch.quora.com/up/%s/updates?min_seq=%s&channel=%s&hash=%s", rand.Intn(1000000)+1, boxname, seq, channel, hash)
+	log.Debug("WebSocket is not open, start to open it")
+	wsMessage = &poeWsMessage{}
+	wsMessageStringToJson = &poeWsMessageStringToJson{}
+	url := fmt.Sprintf("wss://tch%d.tch.quora.com/up/%s/updates?min_seq=%s&channel=%s&hash=%s", rand.Intn(1000000)+1, poe.setting.TchannelData.BoxName, poe.setting.TchannelData.MinSeq, poe.setting.TchannelData.Channel, poe.setting.TchannelData.ChannelHash)
 	header := http.Header{}
+	log.Debug("websocket url:", url)
 	conn, resp, err := websocket.DefaultDialer.Dial(url, header)
 	if err != nil {
 		log.Error("dial:", err, resp.StatusCode)
@@ -404,6 +330,7 @@ func (poe *PoeGPT) PoeWsClient() bool {
 				})
 				return
 			}
+			log.Debug("message:", string(message))
 			json.Unmarshal(message, wsMessage)
 			json.Unmarshal([]byte(wsMessage.Messages[0]), wsMessageStringToJson)
 			var res *GptMessage
@@ -455,9 +382,7 @@ func (poe *PoeGPT) PoeWsClient() bool {
 					}
 					continue
 				}
-
 			}
-
 			lastMessage = wsMessageStringToJson.Payload.Data.MessageAdded.Text
 			res = &GptMessage{
 				Id:              fmt.Sprintf("%d", wsMessageStringToJson.Payload.Data.MessageAdded.MessageID),
@@ -474,7 +399,8 @@ func (poe *PoeGPT) PoeWsClient() bool {
 			poe.ParentMessageID = fmt.Sprintf("%d", wsMessageStringToJson.Payload.Data.MessageAdded.MessageID)
 			poe.MessageID = fmt.Sprintf("%d", wsMessageStringToJson.Payload.Data.MessageAdded.MessageID)
 			poe.ConversationID = "poe"
-			//fmt.Printf("message_id:%d\ncontent:%s\ncomplete%s", wsMessageStringToJson.Payload.Data.MessageAdded.MessageID, wsMessageStringToJson.Payload.Data.MessageAdded.Text, wsMessageStringToJson.Payload.Data.MessageAdded.State)
+			log.Debug(fmt.Sprintf("message_id:%d\ncontent:%s\ncomplete%s", wsMessageStringToJson.Payload.Data.MessageAdded.MessageID, wsMessageStringToJson.Payload.Data.MessageAdded.Text, wsMessageStringToJson.Payload.Data.MessageAdded.State))
+
 		}
 	}()
 
@@ -494,7 +420,7 @@ func (poe *PoeGPT) PoeWsClient() bool {
 
 	select {
 	case <-done:
-		log.Info("\tcase <-done:\n")
+		log.Debug("case <-done:")
 		poe.wsOpen = false
 		poe.wsReopenChan <- true
 		log.Error("websocket failed reopen:")
@@ -507,36 +433,45 @@ func (poe *PoeGPT) ReOpenWsClient() {
 	for {
 		select {
 		case <-poe.wsReopenChan:
-			log.Info("websocket reopen to reconnect")
+			log.Debug("websocket reopen to reconnect")
 			go poe.PoeWsClient()
 		}
 	}
 
 }
 
-func (poe *PoeGPT) Request(body *bytes.Reader) (*http.Response, error) {
-	url := "https://poe.com/api/gql_POST"
-	req, err := http.NewRequest("POST", url, body)
+func (poe *PoeGPT) PoeRequest(httpMethod, url string, body *bytes.Reader) (*http.Response, error) {
+	var req *http.Request
+	var err error
+	if body == nil {
+		req, err = http.NewRequest(httpMethod, url, nil)
+	} else {
+		req, err = http.NewRequest(httpMethod, url, body)
+	}
 	if err != nil {
 		return nil, err
 	}
-
-	req.Header.Set("authority", "poe.com")
-	req.Header.Set("accept", "*/*")
-	req.Header.Set("accept-language", "zh-CN,zh;q=0.9")
-	req.Header.Set("content-type", "application/json")
-	req.Header.Set("cookie", poe.cookie)
-	req.Header.Set("origin", "https://poe.com")
-	req.Header.Set("poe-formkey", poe.formKey)
-	req.Header.Set("poe-tchannel", poe.channel)
-	req.Header.Set("referer", "https://poe.com/")
-	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="100", "Google Chrome";v="100"`)
-	req.Header.Set("sec-ch-ua-mobile", "?0")
-	req.Header.Set("sec-ch-ua-platform", `"macOS"`)
-	req.Header.Set("sec-fetch-dest", "empty")
-	req.Header.Set("sec-fetch-mode", "cors")
-	req.Header.Set("sec-fetch-site", "same-origin")
-	req.Header.Set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
+	headers := http.Header{
+		"authority":          {"poe.com"},
+		"accept":             {"*/*"},
+		"accept-language":    {"zh-CN,zh;q=0.9"},
+		"content-type":       {"application/json"},
+		"cookie":             {poe.cookie},
+		"origin":             {"https://poe.com"},
+		"referer":            {"https://poe.com/"},
+		"sec-ch-ua":          {`" Not A;Brand";v="99", "Chromium";v="100", "Google Chrome";v="100"`},
+		"sec-ch-ua-mobile":   {"?0"},
+		"sec-ch-ua-platform": {`"macOS"`},
+		"sec-fetch-dest":     {"empty"},
+		"sec-fetch-mode":     {"cors"},
+		"sec-fetch-site":     {"same-origin"},
+		"user-agent":         {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36"},
+	}
+	if url == "https://poe.com/api/gql_POST" {
+		headers.Add("poe-formkey", poe.setting.Formkey)
+		headers.Add("poe-tchannel", poe.setting.TchannelData.Channel)
+	}
+	req.Header = headers
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

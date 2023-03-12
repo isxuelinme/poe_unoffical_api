@@ -10,22 +10,43 @@ import (
 	//"xuelin.me/go/lib/godump"
 )
 
-type LogSaveFunc func(log string)
+type SaveFunc func(log string)
 
-var logSaveFunc LogSaveFunc
+var logSaveFunc SaveFunc
 
-type LogShowAllFunc func(date string)
+type ShowAllFunc func(date string)
 
-var logShowAllFunc LogShowAllFunc
+var logShowAllFunc ShowAllFunc
 
-func INIT(save LogSaveFunc, show LogShowAllFunc) {
+type Mode uint
+
+var DEBUG Mode = 1
+var SILENCE Mode = 2
+var ERROR Mode = 3
+var defaultLogMode Mode = 2
+
+func INIT(save SaveFunc, show ShowAllFunc) {
 	logSaveFunc = save
 	logShowAllFunc = show
 }
-func LoggerOut(title string, out []interface{}, outputStack bool) {
+
+func SetLogMode(mode Mode) {
+	defaultLogMode = mode
+}
+
+// LoggerOut if outputDetailStack is true, will output the detail stack
+// if not will output the first line of stack
+func LoggerOut(title string, out []interface{}, outputDetailStack bool) {
+	if defaultLogMode == SILENCE {
+		return
+	}
+	if defaultLogMode == ERROR && title != "Error" {
+		return
+	}
+
 	stackStr := ""
 	outStack := ""
-	if outputStack {
+	if outputDetailStack {
 		stack := debug.Stack()
 		stackSlice := strings.Split(string(stack), "\n")
 		stackSlice = stackSlice[7 : len(stackSlice)-1]
@@ -79,7 +100,10 @@ func Error(out ...interface{}) {
 	LoggerOut("Error", out, true)
 }
 func Info(out ...interface{}) {
-	LoggerOut("Info", out, false)
+	LoggerOut("Debug", out, false)
+}
+func Debug(out ...interface{}) {
+	LoggerOut("Debug", out, false)
 }
 func Panic(out ...interface{}) {
 	LoggerOut("Panic", out, true)
