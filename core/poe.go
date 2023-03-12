@@ -114,23 +114,10 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 		Query         string    `json:"query"`
 		Variables     Variables `json:"variables"`
 	}
-	payLodTemp := `
-	{
-  "operationName": "AddHumanMessageMutation",
-  "query": "mutation AddHumanMessageMutation($chatId: BigInt!, $bot: String!, $query: String!, $source: MessageSource, $withChatBreak: Boolean! = false) {\n  messageEdgeCreate(\n    chatId: $chatId\n    bot: $bot\n    query: $query\n    source: $source\n    withChatBreak: $withChatBreak\n  ) {\n    __typename\n    message {\n      __typename\n      node {\n        __typename\n        ...MessageFragment\n        chat {\n          __typename\n          id\n          shouldShowDisclaimer\n        }\n      }\n    }\n    chatBreak {\n      __typename\n      node {\n        __typename\n        ...MessageFragment\n      }\n    }\n  }\n}\nfragment MessageFragment on Message {\n  id\n  __typename\n  messageId\n  text\n  linkifiedText\n  authorNickname\n  state\n  vote\n  voteReason\n  creationTime\n  suggestedReplies\n}",
-  "variables": {
-    "bot": "capybara",
-    "chatId": 550922,
-    "query": "现在还记得吗？\n",
-    "source": null,
-    "withChatBreak": false
-  }
-}
-`
 
 	var payload Payload
 
-	json.Unmarshal([]byte(payLodTemp), &payload)
+	json.Unmarshal([]byte(payLoadForTalk), &payload)
 
 	payload.Variables.Query = askRequest.Question
 
@@ -138,7 +125,7 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 	body := bytes.NewReader(payloadBytes)
 	resp, err := poe.Request(body)
 	if err != nil {
-		log.Error(err, "请求错误")
+		log.Error("http resuest error", err)
 		poe.MessageBus.Publish(&messageQueue.Message{
 			Id: time.Now().UnixNano(),
 			MessageEntry: &GptMessage{
@@ -150,7 +137,7 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		log.Error("statusCode is not 200")
+		log.Error("statusCode is not 200", resp.StatusCode)
 		poe.MessageBus.Publish(&messageQueue.Message{
 			Id: time.Now().UnixNano(),
 			MessageEntry: &GptMessage{
@@ -228,21 +215,8 @@ func (poe *PoeGPT) GetHistory() (*PoeGetHistoryMessage, error) {
 			Last   int         `json:"last"`
 		} `json:"variables"`
 	}
-
-	payLodTemp := `
-	{
-  "operationName": "ChatPaginationQuery",
-  "query": "query ChatPaginationQuery($bot: String!, $before: String, $last: Int! = 10) {\n  chatOfBot(bot: $bot) {\n    id\n    __typename\n    messagesConnection(before: $before, last: $last) {\n      __typename\n      pageInfo {\n        __typename\n        hasPreviousPage\n      }\n      edges {\n        __typename\n        node {\n          __typename\n          ...MessageFragment\n        }\n      }\n    }\n  }\n}\nfragment MessageFragment on Message {\n  id\n  __typename\n  messageId\n  text\n  linkifiedText\n  authorNickname\n  state\n  vote\n  voteReason\n  creationTime\n  suggestedReplies\n}",
-  "variables": {
-    "before": null,
-    "bot": "capybara",
-    "last": 20
-  }
-}
-`
-	var payload Payload
-
-	json.Unmarshal([]byte(payLodTemp), &payload)
+	payload := Payload{}
+	json.Unmarshal([]byte(payLoadForGetHistory), &payload)
 
 	payload.Variables.Last = 1
 	payloadBytes, _ := json.Marshal(payload)
@@ -250,13 +224,13 @@ func (poe *PoeGPT) GetHistory() (*PoeGetHistoryMessage, error) {
 
 	resp, err := poe.Request(body)
 	if err != nil {
-		log.Error(err, "请求错误")
+		log.Error("请求错误", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Error("statusCode is not 200")
+		log.Error("statusCode is not 200", resp.StatusCode)
 		return nil, errors.New("statusCode is not 200")
 	}
 	respB, _ := ioutil.ReadAll(resp.Body)
@@ -300,7 +274,8 @@ var wsMessageStringToJson *WsMessageStringToJson
 
 func (poe *PoeGPT) GetSettings() (seq string, hash string, boxName string, channel string, err error) {
 	client := &http.Client{}
-	req, _ := http.NewRequest("GET", "https://poe.com/api/settings?channel=poe-chan51-8888-hhmpqzuksgonnzdwnitj", nil)
+	settingUrl := fmt.Sprintf("https://poe.com/api/settings?channel=%s", poe.channel)
+	req, _ := http.NewRequest("GET", settingUrl, nil)
 	req.Header.Set("authority", "poe.com")
 	req.Header.Set("accept", "*/*")
 	req.Header.Set("accept-language", "zh-CN,zh;q=0.9")
