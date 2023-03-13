@@ -82,3 +82,52 @@ type PoeGetHistoryMessage struct {
 		IsFinal bool `json:"is_final"`
 	} `json:"extensions"`
 }
+type GetSettingResponse struct {
+	Formkey      string `json:"formkey"`
+	TchannelData struct {
+		MinSeq          string `json:"minSeq"`
+		Channel         string `json:"channel"`
+		ChannelHash     string `json:"channelHash"`
+		BoxName         string `json:"boxName"`
+		BaseHost        string `json:"baseHost"`
+		TargetUrl       string `json:"targetUrl"`
+		EnableWebsocket bool   `json:"enableWebsocket"`
+	} `json:"tchannelData"`
+}
+
+type PoeGetHistoryPayload struct {
+	OperationName string `json:"operationName"`
+	Query         string `json:"query"`
+	Variables     struct {
+		Before interface{} `json:"before"`
+		Bot    string      `json:"bot"`
+		Last   int         `json:"last"`
+	} `json:"variables"`
+}
+
+type poeWsMessage struct {
+	Messages []string `json:"messages"`
+	MinSeq   int64    `json:"min_seq"`
+}
+
+type poeWsMessageStringToJson struct {
+	MessageType string `json:"message_type"`
+	Payload     struct {
+		UniqueID         string `json:"unique_id"`
+		SubscriptionName string `json:"subscription_name"`
+		Data             struct {
+			MessageAdded struct {
+				ID               string      `json:"id"`
+				MessageID        int         `json:"messageId"`
+				CreationTime     int64       `json:"creationTime"`
+				State            string      `json:"state"`
+				Text             string      `json:"text"`
+				Author           string      `json:"author"`
+				LinkifiedText    string      `json:"linkifiedText"`
+				SuggestedReplies []string    `json:"suggestedReplies"`
+				Vote             interface{} `json:"vote"`
+				VoteReason       interface{} `json:"voteReason"`
+			} `json:"messageAdded"`
+		} `json:"data"`
+	} `json:"payload"`
+}
