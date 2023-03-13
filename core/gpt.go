@@ -115,7 +115,7 @@ func (u *UserChat) NewMessageNotify(askRequest *AskRequest, lastResponse *GptMes
 		for {
 			select {
 			case <-ctx.Done():
-				log.Info("Cancel", ctx.Err())
+				log.Debug("Cancel", ctx.Err())
 				return
 			default:
 				if time.Now().Unix()-lastMessageTimeStamp > 60 {
@@ -269,11 +269,11 @@ func (u *UserChat) NewPersistenceConsumer() *messageQueue.ConsumerConfigure {
 			orgMessage := message.MessageEntry.(*GptMessage)
 			if orgMessage.IsEnd {
 				if orgMessage.Id == u.lastMessageId {
-					log.Info("db_insert repeat message id")
+					log.Debug("db_insert repeat message id")
 					return nil
 				}
 				u.lastMessageId = orgMessage.Id
-				log.Info("db_insert", orgMessage)
+				log.Debug("db_insert", orgMessage)
 				if orgMessage.Text == "" {
 					log.Error("response wrong ", orgMessage.Error)
 					return nil

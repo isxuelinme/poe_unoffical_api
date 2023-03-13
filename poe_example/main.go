@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	core.SetLogMode(core.LOG_DEBUG)
 	mutilUser := core.NewMutLtiUserGpt(core.GptTypePoeUnofficial)
 	ask := &core.AskRequest{
 		UserId:           0,
