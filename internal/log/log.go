@@ -103,7 +103,7 @@ func Info(out ...interface{}) {
 	LoggerOut("Debug", out, false)
 }
 func Debug(out ...interface{}) {
-	LoggerOut("Debug", out, true)
+	LoggerOut("Debug", out, false)
 }
 func Panic(out ...interface{}) {
 	LoggerOut("Panic", out, true)

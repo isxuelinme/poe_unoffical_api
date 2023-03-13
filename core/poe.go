@@ -14,6 +14,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -26,11 +27,13 @@ type PoeGPT struct {
 	wsReopenChan                               chan bool
 	lastAskRequest                             *AskRequest
 	cookie                                     string
-	channel                                    string
-	formKey                                    string
+	cookieMap                                  map[string]string
+	setting                                    *GetSettingResponse
 }
 
 func NewPoeGPT(parentMessageID string, messageConsumer *messageQueue.ConsumerConfigure) *PoeGPT {
+	log.Debug("启动单用户服务")
+
 	poeGPT := &PoeGPT{
 		MessageBus:      messageQueue.NewMemoryMessageQueue("Poe", messageQueue.ModeChan),
 		PoeURl:          "https://Poe.khanh.lol/completion",
@@ -38,19 +41,26 @@ func NewPoeGPT(parentMessageID string, messageConsumer *messageQueue.ConsumerCon
 		ConversationID:  "poe",
 		wsOpen:          false,
 		wsReopenChan:    make(chan bool),
+		cookieMap:       make(map[string]string),
 	}
 
 	cookie := os.Getenv("POE_COOKIE")
 	if cookie == "" {
 		log.PanicAndStopWorld("init POE configuration wrong, cookie is empty")
 	}
-
 	poeGPT.cookie = cookie
+
+	poeChannel := os.Getenv("POE_CHANNEL")
+	if poeChannel == "" {
+		log.PanicAndStopWorld("init POE configuration wrong, cookie is empty")
+	}
+
 	_, _, _, _, err := poeGPT.GetSettings()
 	if err != nil {
-		log.PanicAndStopWorld("init POE configuration wrong ", err)
+		log.PanicAndStopWorld("init setting wrong ", err)
 		return nil
 	}
+	log.Debug("get settings success")
 
 	poeGPT.MessageBus.AddConsumer(messageConsumer)
 	go poeGPT.ReOpenWsClient()
@@ -101,7 +111,7 @@ func (poe *PoeGPT) SetParentMessageID(parentMessageID string) {
 
 func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessage, error) {
 	//TODO implement me
-
+	log.Debug("新问题:" + askRequest.Question)
 	type Variables struct {
 		Bot           string      `json:"bot"`
 		ChatID        int         `json:"chatId"`
@@ -119,6 +129,7 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 
 	json.Unmarshal([]byte(payLoadForTalk), &payload)
 
+	payload.Variables.ChatID, _ = strconv.Atoi(os.Getenv("POV_CHAT_ID"))
 	payload.Variables.Query = askRequest.Question
 
 	payloadBytes, err := json.Marshal(payload)
@@ -138,7 +149,8 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		log.Error("statusCode is not 200", resp.StatusCode)
+		str, _ := io.ReadAll(resp.Body)
+		log.Error("statusCode is not 200", resp.StatusCode, string(str))
 		poe.MessageBus.Publish(&messageQueue.Message{
 			Id: time.Now().UnixNano(),
 			MessageEntry: &GptMessage{
@@ -149,6 +161,9 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 		return nil, err
 	}
 
+	str, _ := ioutil.ReadAll(resp.Body)
+
+	log.Debug("获取到的回答", string(str))
 	defer resp.Body.Close()
 	poe.lastAskRequest = askRequest
 
@@ -240,8 +255,8 @@ var wsMessage *poeWsMessage
 var wsMessageStringToJson *poeWsMessageStringToJson
 
 func (poe *PoeGPT) GetSettings() (seq string, hash string, boxName string, channel string, err error) {
-	settingUrl := fmt.Sprintf("https://poe.com/api/settings?channel=%s", poe.channel)
-	resp, err := poe.PoeRequest("GET", settingUrl, nil)
+	url := fmt.Sprintf("https://poe.com/api/settings?channel=%s", os.Getenv("POE_CHANNEL"))
+	resp, err := poe.PoeRequest("GET", url, nil)
 	if err != nil {
 		log.Error(err)
 		return "", "", "", "", err
@@ -249,7 +264,6 @@ func (poe *PoeGPT) GetSettings() (seq string, hash string, boxName string, chann
 	defer resp.Body.Close()
 	bodyText, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Error(err)
 		return "", "", "", "", err
 	}
 	var getSeqResponse GetSettingResponse
@@ -263,8 +277,7 @@ func (poe *PoeGPT) GetSettings() (seq string, hash string, boxName string, chann
 	hash = getSeqResponse.TchannelData.ChannelHash
 	boxName = getSeqResponse.TchannelData.BoxName
 	channel = getSeqResponse.TchannelData.Channel
-	poe.formKey = getSeqResponse.Formkey
-	poe.channel = channel
+	poe.setting = &getSeqResponse
 	return
 }
 
@@ -278,14 +291,11 @@ func (poe *PoeGPT) PoeWsClient() bool {
 		return poe.wsOpen
 	}
 	log.Debug("WebSocket is not open, start to open it")
-	seq, hash, boxName, channel, err := poe.GetSettings()
-	if err != nil {
-		return false
-	}
 	wsMessage = &poeWsMessage{}
 	wsMessageStringToJson = &poeWsMessageStringToJson{}
-	url := fmt.Sprintf("wss://tch%d.tch.quora.com/up/%s/updates?min_seq=%s&channel=%s&hash=%s", rand.Intn(1000000)+1, boxName, seq, channel, hash)
+	url := fmt.Sprintf("wss://tch%d.tch.quora.com/up/%s/updates?min_seq=%s&channel=%s&hash=%s", rand.Intn(1000000)+1, poe.setting.TchannelData.BoxName, poe.setting.TchannelData.MinSeq, poe.setting.TchannelData.Channel, poe.setting.TchannelData.ChannelHash)
 	header := http.Header{}
+	log.Debug("websocket url:", url)
 	conn, resp, err := websocket.DefaultDialer.Dial(url, header)
 	if err != nil {
 		log.Error("dial:", err, resp.StatusCode)
@@ -321,6 +331,7 @@ func (poe *PoeGPT) PoeWsClient() bool {
 				})
 				return
 			}
+			log.Debug("message:", string(message))
 			json.Unmarshal(message, wsMessage)
 			json.Unmarshal([]byte(wsMessage.Messages[0]), wsMessageStringToJson)
 			var res *GptMessage
@@ -431,7 +442,13 @@ func (poe *PoeGPT) ReOpenWsClient() {
 }
 
 func (poe *PoeGPT) PoeRequest(httpMethod, url string, body *bytes.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(httpMethod, url, body)
+	var req *http.Request
+	var err error
+	if body == nil {
+		req, err = http.NewRequest(httpMethod, url, nil)
+	} else {
+		req, err = http.NewRequest(httpMethod, url, body)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -442,8 +459,6 @@ func (poe *PoeGPT) PoeRequest(httpMethod, url string, body *bytes.Reader) (*http
 		"content-type":       {"application/json"},
 		"cookie":             {poe.cookie},
 		"origin":             {"https://poe.com"},
-		"poe-formkey":        {poe.formKey},
-		"poe-tchannel":       {poe.channel},
 		"referer":            {"https://poe.com/"},
 		"sec-ch-ua":          {`" Not A;Brand";v="99", "Chromium";v="100", "Google Chrome";v="100"`},
 		"sec-ch-ua-mobile":   {"?0"},
@@ -453,7 +468,12 @@ func (poe *PoeGPT) PoeRequest(httpMethod, url string, body *bytes.Reader) (*http
 		"sec-fetch-site":     {"same-origin"},
 		"user-agent":         {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36"},
 	}
+	if url != "https://poe.com/api/settings?channel=poe-chan51-8888-hhmpqzuksgonnzdwnitj" && url != "https://poe.com/login" {
+		headers.Add("poe-formkey", poe.setting.Formkey)
+		headers.Add("poe-tchannel", poe.setting.TchannelData.Channel)
+	}
 	req.Header = headers
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

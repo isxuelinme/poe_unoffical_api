@@ -6,17 +6,17 @@ import (
 )
 
 func main() {
-	core.SetLogMode(core.LOG_DEBUG)
-	mutilUser := core.NewMutLtiUserGpt(core.GptTypePoeUnofficial)
+	core.SetLogMode(core.LOG_ERROR)
+	MutLtiUser := core.NewMutLtiUserGpt(core.GptTypePoeUnofficial)
 	ask := &core.AskRequest{
-		UserId:           0,
+		UserId:           1,
 		Question:         "hi~ bro",
 		CallbackFuncName: "",
 		AskResponseCallBack: func(askRequest *core.AskRequest, response []byte) {
 			fmt.Println(string(response))
 		},
 	}
-	mutilUser.Talk(ask)
+	MutLtiUser.Talk(ask)
 
 	select {}
 
