@@ -11,7 +11,7 @@ type GptMessage struct {
 	Error           any      `json:"error"`
 }
 
-type WSMessageResponse struct {
+type CallbackMessageResponse struct {
 	Type             string `json:"type"`
 	CallbackFuncName string `json:"callback_func_name"`
 	Data             any    `json:"data"`

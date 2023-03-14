@@ -19,4 +19,4 @@ var RequestConnTypeJSON RequestConnType = 2
 var RequestConnTypeGrpc RequestConnType = 3
 var RequestConnTypeHttpEventStream = 4
 
-type AskRequestResponseCallBack func(askRequest *AskRequest, response []byte)
+type AskRequestResponseCallBack func(askRequest *AskRequest, message *CallbackMessageResponse)
