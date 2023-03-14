@@ -60,7 +60,7 @@ func main() {
         Question:         "hi~ bro",
         CallbackFuncName: "",
         AskResponseCallBack: func(askRequest *core.AskRequest, response *core.CallbackMessageResponse) {
-                fmt.Println(response.Data.Text)
+			    fmt.Printf("\r answer: %s", message.Data.Text)
         },
     }
     //ask question
