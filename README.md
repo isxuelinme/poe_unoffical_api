@@ -3,7 +3,7 @@
 ## Import
 
 ```dotenv
-go get github.com/isxuelinme/poe_unofficial_api/core
+import "github.com/isxuelinme/poe_unofficial_api/core"
 go mod tidy 
 ```
 
@@ -49,16 +49,19 @@ POV_CHAT_ID = <your chat_id>
 ## More details in core and example
 
 ```golang
+package main
+import "github.com/isxuelinme/poe_unofficial_api/core"
+
 func main() {
     core.SetLogMode(core.LOG_ERROR)
     MutLtiUser := core.NewMutLtiUserGpt(core.GptTypePoeUnofficial)
     ask := &core.AskRequest{
-    UserId:           1,
-    Question:         "hi~ bro",
-    CallbackFuncName: "",
-    AskResponseCallBack: func(askRequest *core.AskRequest, response *core.CallbackMessageResponse) {
-    fmt.Println(response.text)
-    },
+        UserId:           1,
+        Question:         "hi~ bro",
+        CallbackFuncName: "",
+        AskResponseCallBack: func(askRequest *core.AskRequest, response *core.CallbackMessageResponse) {
+                fmt.Println(response.Data.Text)
+        },
     }
     //ask question
     MutLtiUser.Talk(ask)
