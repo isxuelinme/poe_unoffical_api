@@ -32,7 +32,7 @@ type PoeGPT struct {
 }
 
 func NewPoeGPT(parentMessageID string, messageConsumer *messageQueue.ConsumerConfigure) *PoeGPT {
-	log.Debug("启动单用户服务")
+	log.Debug("start poe gpt")
 
 	poeGPT := &PoeGPT{
 		MessageBus:      messageQueue.NewMemoryMessageQueue("Poe", messageQueue.ModeChan),
@@ -110,7 +110,7 @@ func (poe *PoeGPT) SetParentMessageID(parentMessageID string) {
 
 func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessage, error) {
 	//TODO implement me
-	log.Debug("新问题:" + askRequest.Question)
+	log.Debug("new question:" + askRequest.Question)
 	type Variables struct {
 		Bot           string      `json:"bot"`
 		ChatID        int         `json:"chatId"`
@@ -136,7 +136,7 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 	url := "https://poe.com/api/gql_POST"
 	resp, err := poe.PoeRequest("POST", url, body)
 	if err != nil {
-		log.Error("http resuest error", err)
+		log.Error("http request error", err)
 		poe.MessageBus.Publish(&messageQueue.Message{
 			Id: time.Now().UnixNano(),
 			MessageEntry: &GptMessage{
@@ -162,7 +162,7 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 
 	str, _ := ioutil.ReadAll(resp.Body)
 
-	log.Debug("获取到的回答", string(str))
+	log.Debug("answer:", string(str))
 	defer resp.Body.Close()
 	poe.lastAskRequest = askRequest
 
@@ -228,7 +228,7 @@ func (poe *PoeGPT) GetHistory() (*PoeGetHistoryMessage, error) {
 	url := "https://poe.com/api/gql_POST"
 	resp, err := poe.PoeRequest("POST", url, body)
 	if err != nil {
-		log.Error("请求错误", err)
+		log.Error("request err", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -420,7 +420,7 @@ func (poe *PoeGPT) PoeWsClient() bool {
 
 	select {
 	case <-done:
-		log.Debug("\tcase <-done:\n")
+		log.Debug("case <-done:")
 		poe.wsOpen = false
 		poe.wsReopenChan <- true
 		log.Error("websocket failed reopen:")

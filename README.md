@@ -1,9 +1,14 @@
-# using POE unofficial api
-### import 
+# Using POE Unofficial API
+
+## Import
+
 ```dotenv
-go get github.com/isxuelinme/poe_unoffical_api/core
+go get github.com/isxuelinme/poe_unofficial_api/core
+go mod tidy 
 ```
-### Run the following code on your chrome console 
+
+## Run the following code on your Chrome console
+
 ```javascript
 function getChatId() {
     let channel = localStorage.getItem("poe-tchannel-channel")
@@ -26,18 +31,42 @@ function getChatId() {
         });
 }(getChatId())
 ```
-### Copy the value of POV_CHANNEL and POV_CHAT_ID, outputs like following 
+
+## Copy the value of POV_CHANNEL and POV_CHAT_ID after running the above code. The output will look like this:
+
 ```dotenv
 POV_CHANNEL =  poe-chan51-8888-hhmp2zuksgonnzdwnitj
 POV_CHAT_ID =  550223
 ```
 
-### Change .env.example name to .env and change the value of cookie of yourself
+## Change .env.example name to .env and change the value of your cookie
 ```dotenv
 POE_COOKIE = <your cookie>
 POV_CHANNEL = <your channel>
 POV_CHAT_ID = <your chat_id>
 ```
-### More detail in example
-### Not friendly to business and especially noobs,
-### just for dev/test
+
+## More details in core and example
+
+```golang
+func main() {
+    core.SetLogMode(core.LOG_ERROR)
+    MutLtiUser := core.NewMutLtiUserGpt(core.GptTypePoeUnofficial)
+    ask := &core.AskRequest{
+    UserId:           1,
+    Question:         "hi~ bro",
+    CallbackFuncName: "",
+    AskResponseCallBack: func(askRequest *core.AskRequest, response *core.CallbackMessageResponse) {
+    fmt.Println(response.text)
+    },
+    }
+    //ask question
+    MutLtiUser.Talk(ask)
+    
+    select {}
+}
+```
+
+## It's easy to use, but I can't open the source SSE (http event stream) now. Maybe later. However, you can use AskResponseCallBack to implement it by yourself.
+
+## It has implemented multi-user, but it is not friendly to business and especially noobs, just for dev/test. So you have to read the code by yourself.

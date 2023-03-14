@@ -10,12 +10,13 @@ func main() {
 	MutLtiUser := core.NewMutLtiUserGpt(core.GptTypePoeUnofficial)
 	ask := &core.AskRequest{
 		UserId:           1,
-		Question:         "hi~ bro",
+		Question:         "I love forever but you love me",
 		CallbackFuncName: "",
-		AskResponseCallBack: func(askRequest *core.AskRequest, response []byte) {
-			fmt.Println(string(response))
+		AskResponseCallBack: func(askRequest *core.AskRequest, message *core.CallbackMessageResponse) {
+			fmt.Printf("\r answer: %s", message.Data.Text)
 		},
 	}
+	//ask question
 	MutLtiUser.Talk(ask)
 
 	select {}

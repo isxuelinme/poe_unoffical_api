@@ -2,8 +2,6 @@ package core
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"github.com/isxuelinme/poe_unoffical_api/internal/log"
 	"github.com/isxuelinme/poe_unoffical_api/internal/messageQueue"
 	_ "github.com/joho/godotenv/autoload"
@@ -59,39 +57,15 @@ func (m *MultiUserGpt) Talk(askRequest *AskRequest) {
 			UserId: askRequest.UserId,
 		}
 
-		//d := &db.ChatMessages{}
+		var cid, pid string = "1", "2"
 
-		if m.gptType == GptTypeBingGpt {
-			//cid, pid, _ := d.GetLastConversationIdAndMessageIdByUserId(1, "bing")
-			var cid, pid string = "1", "2"
-
-			userStore := &UserStore{
-				UserId:          1,
-				ConversationId:  cid,
-				ParentMessageId: pid,
-			}
-			m.GptMap[askRequest.UserId].NewBingGpt(userStore)
-		} else if m.gptType == GptTypeUnOfficial {
-			//cid, pid, _ := d.GetLastConversationIdAndMessageIdByUserId(1, "unofficial")
-			var cid, pid string = "1", "2"
-
-			userStore := &UserStore{
-				UserId:          1,
-				ConversationId:  cid,
-				ParentMessageId: pid,
-			}
-			m.GptMap[askRequest.UserId].NewUnofficialChatGpt(userStore)
-		} else if m.gptType == GptTypePoeUnofficial {
-			//cid, pid, _ := d.GetLastConversationIdAndMessageIdByUserId(1, "poe")
-			var cid, pid string = "1", "2"
-
-			userStore := &UserStore{
-				UserId:          1,
-				ConversationId:  cid,
-				ParentMessageId: pid,
-			}
-			m.GptMap[askRequest.UserId].NewPoeGpt(userStore)
+		userStore := &UserStore{
+			UserId:          1,
+			ConversationId:  cid,
+			ParentMessageId: pid,
 		}
+		m.GptMap[askRequest.UserId].NewPoeGpt(userStore)
+
 		m.GptMap[askRequest.UserId].Ask(askRequest)
 	}
 }
@@ -136,7 +110,7 @@ func (u *UserChat) NewMessageNotify(askRequest *AskRequest, lastResponse *GptMes
 							MessageEntry: lastResponse,
 						})
 					}
-					fmt.Println("cancel timeout")
+					log.Error("cancel timeout")
 					cancelFunc()
 					return
 				}
@@ -172,12 +146,11 @@ func (u *UserChat) NewMessageNotify(askRequest *AskRequest, lastResponse *GptMes
 						Suggestions:    orgMessage.Suggestions,
 					}
 				}
-				sendData, _ := json.Marshal(WSMessageResponse{
+				sendData := &CallbackMessageResponse{
 					Type:             "dialServiceWithCallbackResponse",
 					CallbackFuncName: askRequest.CallbackFuncName,
 					Data:             dialCallBackResp,
-				})
-				//ws.GetManager().SendAll(sendData)
+				} //ws.GetManager().SendAll(sendData)
 				askRequest.AskResponseCallBack(askRequest, sendData)
 				if orgMessage.Text == "" {
 					log.Error("发生错误", orgMessage.Error)
@@ -192,12 +165,11 @@ func (u *UserChat) NewMessageNotify(askRequest *AskRequest, lastResponse *GptMes
 						Text:           " ",
 						Suggestions:    []string{},
 					}
-					sendData, _ := json.Marshal(WSMessageResponse{
+					sendData := &CallbackMessageResponse{
 						Type:             "dialServiceWithCallbackResponse",
 						CallbackFuncName: askRequest.CallbackFuncName,
 						Data:             dialCallBackResp,
-					})
-					//ws.GetManager().SendAll(sendData)
+					}
 					askRequest.AskResponseCallBack(askRequest, sendData)
 				}
 
@@ -217,14 +189,14 @@ func (u *UserChat) NewMessageNotify(askRequest *AskRequest, lastResponse *GptMes
 						Text:           orgMessage.Text,
 						Suggestions:    suggestions,
 					}
-					sendData, _ := json.Marshal(WSMessageResponse{
+					sendData := &CallbackMessageResponse{
 						Type:             "dialServiceWithCallbackResponse",
 						CallbackFuncName: askRequest.CallbackFuncName,
 						Data:             dialCallBackResp,
-					})
+					}
 					//ws.GetManager().SendAll(sendData)
 					askRequest.AskResponseCallBack(askRequest, sendData)
-					fmt.Printf("receive %v topic:  %s consumerId %s time %s \n", message.Id, topic, consumerId, time.Now().Format("2006-01-02 15:04:05"))
+					log.Debug("receive %v topic:  %s consumerId %s time %s \n", message.Id, topic, consumerId, time.Now().Format("2006-01-02 15:04:05"))
 				}
 			}
 			return nil
@@ -240,14 +212,6 @@ type UserStore struct {
 	ParentMessageId string
 }
 
-func (u *UserChat) NewUnofficialChatGpt(store *UserStore) {
-	//implement it by yourself :)
-}
-
-func (u *UserChat) NewBingGpt(store *UserStore) {
-	//implement it by yourself :)
-
-}
 func (u *UserChat) NewPoeGpt(store *UserStore) {
 
 	if u.Gpt != nil {
