@@ -3,6 +3,7 @@ module github.com/isxuelinme/poe_unoffical_api
 go 1.20
 
 require (
+	github.com/alexandrevicenzi/go-sse v1.6.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/inancgumus/screen v0.0.0-20190314163918-06e984b86ed3
 )
