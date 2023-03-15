@@ -1,6 +1,11 @@
 # Using POE Unofficial API
 
-## demo
+## demo SSE [READ SSE README.md](http://github.com/isxuelinme/poe_unofficial_api/client/sse/README.md)
+
+https://user-images.githubusercontent.com/13929427/225206524-36ec3a9f-bf6a-4252-8cd0-5deeef93da7c.mp4
+
+
+## demo CLI
 
 https://user-images.githubusercontent.com/13929427/224995915-ba5f873f-28ab-4dec-8790-a760c0dcc547.mp4
 
@@ -49,6 +54,11 @@ POE_COOKIE = <your cookie>
 POV_CHANNEL = <your channel>
 POV_CHAT_ID = <your chat_id>
 ```
+## if you wanna use SSE (default is CLI), ADD the following configuration to .env
+```dotenv
+RUN_MODE = SSE
+BACKEND_PORT = <backend port if not set default is 6000>
+```
 
 ## More details in core and example
 
@@ -60,11 +70,12 @@ func main() {
     core.SetLogMode(core.LOG_ERROR)
     MutLtiUser := core.NewMutLtiUserGpt(core.GptTypePoeUnofficial)
     ask := &core.AskRequest{
-        UserId:           1,
+        UserId:           1, //your local user id
         Question:         "hi~ bro",
-        CallbackFuncName: "",
+        CallbackFuncName: "", //useless. Like JSONP or event name
+       // when message Coming from GPT, it will call this function
         AskResponseCallBack: func(askRequest *core.AskRequest, response *core.CallbackMessageResponse) {
-			    fmt.Printf("\r answer: %s", message.Data.Text)
+			fmt.Printf("\r answer: %s", message.Data.Text)
         },
     }
     //ask question
@@ -74,6 +85,15 @@ func main() {
 }
 ```
 
-## It's easy to use, but I can't open the source SSE (http event stream) now. Maybe later. However, you can use AskResponseCallBack to implement it by yourself.
-
+## It's easy to use,However, you can use AskResponseCallBack to implement websocket or more protocol by yourself. learn more [READ SSE IMPLEMENT](http://github.com/isxuelinme/poe_unofficial_api/client/sse/SSE.go)
+```golang
+ ask := &core.AskRequest{
+        UserId:           1,
+        Question:         "hi~ bro",
+        CallbackFuncName: "",
+        AskResponseCallBack: func (askRequest *core.AskRequest, response *core.CallbackMessageResponse) {
+			<your business logiical code>
+        },
+ }
+```
 ## It has implemented multi-user, but it is not friendly to business and especially noobs, just for dev/test. So you have to read the code by yourself.
