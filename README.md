@@ -33,7 +33,7 @@ function getChatId() {
         .then(data => {
             jsonData = JSON.parse(data)
             console.log("POE_CHANNEL = ", channel)
-            console.log("POV_CHAT_ID = ", jsonData.pageProps.payload.chatOfBotDisplayName.chatId)
+            console.log("POE_CHAT_ID = ", jsonData.pageProps.payload.chatOfBotDisplayName.chatId)
         })
         .catch(error => {
             console.error('Error fetching data:', error);
@@ -41,18 +41,18 @@ function getChatId() {
 }(getChatId())
 ```
 
-## Copy the value of POV_CHANNEL and POV_CHAT_ID after running the above code. The output will look like this:
+## Copy the value of POE_CHANNEL and POE_CHAT_ID after running the above code. The output will look like this:
 
 ```dotenv
 POE_CHANNEL =  poe-chan51-8888-hhmp2zuksgonnzdwnitj
-POV_CHAT_ID =  550223
+POE_CHAT_ID =  550223
 ```
 
 ## Change .env.example name to .env and change the value of your cookie
 ```dotenv
 POE_COOKIE = <your cookie>
 POE_CHANNEL = <your channel>
-POV_CHAT_ID = <your chat_id>
+POE_CHAT_ID = <your chat_id>
 ```
 ## if you wanna use SSE (default is CLI), ADD the following configuration to .env
 ```dotenv

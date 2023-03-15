@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/isxuelinme/poe_unoffical_api/internal/log"
-	"github.com/isxuelinme/poe_unoffical_api/internal/messageQueue"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -17,6 +14,10 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/isxuelinme/poe_unoffical_api/internal/log"
+	"github.com/isxuelinme/poe_unoffical_api/internal/messageQueue"
 )
 
 type PoeGPT struct {
@@ -128,7 +129,7 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 
 	json.Unmarshal([]byte(payLoadForTalk), &payload)
 
-	payload.Variables.ChatID, _ = strconv.Atoi(os.Getenv("POV_CHAT_ID"))
+	payload.Variables.ChatID, _ = strconv.Atoi(os.Getenv("POE_CHAT_ID"))
 	payload.Variables.Query = askRequest.Question
 
 	payloadBytes, err := json.Marshal(payload)
