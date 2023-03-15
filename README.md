@@ -1,6 +1,6 @@
 # Using POE Unofficial API
 
-## demo SSE [READ SSE README.md](http://github.com/isxuelinme/poe_unofficial_api/client/sse/README.md)
+## demo SSE [READ SSE README.md](https://github.com/isxuelinme/poe_unoffical_api/blob/main/client/sse/README.md)
 
 https://user-images.githubusercontent.com/13929427/225206524-36ec3a9f-bf6a-4252-8cd0-5deeef93da7c.mp4
 
