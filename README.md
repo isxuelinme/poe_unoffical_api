@@ -97,3 +97,9 @@ func main() {
  }
 ```
 ## It has implemented multi-user, but it is not friendly to business and especially noobs, just for dev/test. So you have to read the code by yourself.
+## If you really have difficulty deploying or are not in the discord group, you can contact WeChat wangjian19830605
+
+I am also implementing webUI by React, if you want try it plz wait a few hours or days
+
+<img width="1426" alt="image" src="https://user-images.githubusercontent.com/13929427/226000606-99eb3372-6bf7-4453-84b3-67067792ec00.png">
+
