@@ -57,7 +57,13 @@ POE_CHAT_ID = <your chat_id>
 ## if you wanna use SSE (default is CLI), ADD the following configuration to .env
 ```dotenv
 RUN_MODE = SSE
-BACKEND_PORT = <backend port if not set default is 6000>
+BACKEND_PORT = <backend port if not set default is 8090>
+```
+
+## if you wanna use proxy, change the value of HTTP_PROXY in .env
+
+```
+HTTP_PROXY = http://<host>:<port>
 ```
 
 ## More details in core and example
