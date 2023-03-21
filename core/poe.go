@@ -297,7 +297,7 @@ func (poe *PoeGPT) PoeWsClient() bool {
 	urlStr := fmt.Sprintf("wss://tch%d.tch.quora.com/up/%s/updates?min_seq=%s&channel=%s&hash=%s", rand.Intn(1000000)+1, poe.setting.TchannelData.BoxName, poe.setting.TchannelData.MinSeq, poe.setting.TchannelData.Channel, poe.setting.TchannelData.ChannelHash)
 	header := http.Header{}
 	log.Debug("websocket url:", urlStr)
-	proxy := os.Getenv("SYSTEM_PROXY")
+	proxy := os.Getenv("HTTP_PROXY")
 	dialer := websocket.DefaultDialer
 	if proxy != "" {
 		proxyUrl, _ := url.Parse(proxy)
@@ -481,7 +481,7 @@ func (poe *PoeGPT) PoeRequest(httpMethod, urlStr string, body *bytes.Reader) (*h
 		headers.Add("poe-tchannel", poe.setting.TchannelData.Channel)
 	}
 	req.Header = headers
-	proxy := os.Getenv("SYSTEM_PROXY")
+	proxy := os.Getenv("HTTP_PROXY")
 	client := &http.Client{}
 	if proxy != "" {
 		proxyUrl, _ := url.Parse(proxy)

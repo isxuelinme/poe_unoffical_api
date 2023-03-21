@@ -60,10 +60,10 @@ RUN_MODE = SSE
 BACKEND_PORT = <backend port if not set default is 8090>
 ```
 
-## if you wanna use proxy, change the value of SYSTEM_PROXY in .env
+## if you wanna use proxy, change the value of HTTP_PROXY in .env
 
 ```
-SYSTEM_PROXY = http://<host>:<port>
+HTTP_PROXY = http://<host>:<port>
 ```
 
 ## More details in core and example
