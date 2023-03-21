@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"sync"
@@ -293,10 +294,17 @@ func (poe *PoeGPT) PoeWsClient() bool {
 	log.Debug("WebSocket is not open, start to open it")
 	wsMessage = &poeWsMessage{}
 	wsMessageStringToJson = &poeWsMessageStringToJson{}
-	url := fmt.Sprintf("wss://tch%d.tch.quora.com/up/%s/updates?min_seq=%s&channel=%s&hash=%s", rand.Intn(1000000)+1, poe.setting.TchannelData.BoxName, poe.setting.TchannelData.MinSeq, poe.setting.TchannelData.Channel, poe.setting.TchannelData.ChannelHash)
+	urlStr := fmt.Sprintf("wss://tch%d.tch.quora.com/up/%s/updates?min_seq=%s&channel=%s&hash=%s", rand.Intn(1000000)+1, poe.setting.TchannelData.BoxName, poe.setting.TchannelData.MinSeq, poe.setting.TchannelData.Channel, poe.setting.TchannelData.ChannelHash)
 	header := http.Header{}
-	log.Debug("websocket url:", url)
-	conn, resp, err := websocket.DefaultDialer.Dial(url, header)
+	log.Debug("websocket url:", urlStr)
+	proxy := os.Getenv("SYSTEM_PROXY")
+	dialer := websocket.DefaultDialer
+	if proxy != "" {
+		proxyUrl, _ := url.Parse(proxy)
+		dialer.Proxy = http.ProxyURL(proxyUrl)
+	}
+
+	conn, resp, err := dialer.Dial(urlStr, header)
 	if err != nil {
 		log.Error("dial:", err, resp.StatusCode)
 		res := &GptMessage{
@@ -441,13 +449,13 @@ func (poe *PoeGPT) ReOpenWsClient() {
 
 }
 
-func (poe *PoeGPT) PoeRequest(httpMethod, url string, body *bytes.Reader) (*http.Response, error) {
+func (poe *PoeGPT) PoeRequest(httpMethod, urlStr string, body *bytes.Reader) (*http.Response, error) {
 	var req *http.Request
 	var err error
 	if body == nil {
-		req, err = http.NewRequest(httpMethod, url, nil)
+		req, err = http.NewRequest(httpMethod, urlStr, nil)
 	} else {
-		req, err = http.NewRequest(httpMethod, url, body)
+		req, err = http.NewRequest(httpMethod, urlStr, body)
 	}
 	if err != nil {
 		return nil, err
@@ -468,13 +476,22 @@ func (poe *PoeGPT) PoeRequest(httpMethod, url string, body *bytes.Reader) (*http
 		"sec-fetch-site":     {"same-origin"},
 		"user-agent":         {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36"},
 	}
-	if url == "https://poe.com/api/gql_POST" {
+	if urlStr == "https://poe.com/api/gql_POST" {
 		headers.Add("poe-formkey", poe.setting.Formkey)
 		headers.Add("poe-tchannel", poe.setting.TchannelData.Channel)
 	}
 	req.Header = headers
-
+	proxy := os.Getenv("SYSTEM_PROXY")
 	client := &http.Client{}
+	if proxy != "" {
+		proxyUrl, _ := url.Parse(proxy)
+		client = &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyURL(proxyUrl),
+			},
+		}
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
