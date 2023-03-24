@@ -70,7 +70,7 @@ func SSE() {
 	}))
 	port := os.Getenv("BACKEND_PORT")
 	if port == "" {
-		port = "6000"
+		port = "8090"
 	}
 	http.ListenAndServe(":"+port, nil)
 }
