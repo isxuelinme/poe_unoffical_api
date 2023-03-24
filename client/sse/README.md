@@ -1,10 +1,10 @@
 ## USING  SSE
 https://user-images.githubusercontent.com/13929427/225206524-36ec3a9f-bf6a-4252-8cd0-5deeef93da7c.mp4
 
-### config env & RUN & and open [http://localhost:6000](localhost:6000/events)
+### config env & RUN & and open [http://localhost:8090](localhost:8090/events)
 ```dotenv
 RUN_MODE = SSE
-BACKEND_PORT = 6000
+BACKEND_PORT = 8090
 ```
 ### code just is explanation
 #### you can use following code to implement yourself web ui 

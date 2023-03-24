@@ -1,3 +1,6 @@
+# if you are chinese, scaning the QR image 
+![IMG_3800](https://user-images.githubusercontent.com/13929427/228984921-37205e95-c6bd-47fa-a919-41f086b10a00.jpeg)
+
 # Using POE Unofficial API
 
 ## demo SSE [READ SSE README.md](https://github.com/isxuelinme/poe_unoffical_api/blob/main/client/sse/README.md)
@@ -107,5 +110,5 @@ func main() {
 
 I am also implementing webUI by React, if you want try it plz wait a few hours or days
 
-<img width="1426" alt="image" src="https://user-images.githubusercontent.com/13929427/226000606-99eb3372-6bf7-4453-84b3-67067792ec00.png">
+![SCR-20230406-bfks-2 (1)](https://user-images.githubusercontent.com/13929427/230142247-69d99649-c2d6-4ef3-8bd3-1c4b5d28ca7b.jpeg)
 
