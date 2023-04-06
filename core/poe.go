@@ -19,6 +19,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/isxuelinme/poe_unoffical_api/internal/log"
 	"github.com/isxuelinme/poe_unoffical_api/internal/messageQueue"
+	recoverInternal "github.com/isxuelinme/poe_unoffical_api/internal/recover"
 )
 
 type PoeGPT struct {
@@ -285,6 +286,8 @@ func (poe *PoeGPT) GetSettings() (seq string, hash string, boxName string, chann
 var littleLock = &sync.Mutex{}
 
 func (poe *PoeGPT) PoeWsClient() bool {
+	defer recoverInternal.DeferFunc("poe PoeWsClient")
+
 	littleLock.Lock()
 	defer littleLock.Unlock()
 	if poe.wsOpen {
@@ -322,6 +325,7 @@ func (poe *PoeGPT) PoeWsClient() bool {
 	// 在新协程中读取来自服务器的消息
 	done := make(chan bool)
 	go func() {
+		defer recoverInternal.DeferFunc("poe PoeWsClient")
 		lastMessage := ""
 		lastMessageId := 0
 		for {
@@ -414,6 +418,8 @@ func (poe *PoeGPT) PoeWsClient() bool {
 	}()
 
 	go func() {
+		defer recoverInternal.DeferFunc("poe PoeWsClient")
+
 		defer func() {
 			done <- true
 		}()
@@ -439,6 +445,7 @@ func (poe *PoeGPT) PoeWsClient() bool {
 }
 
 func (poe *PoeGPT) ReOpenWsClient() {
+	defer recoverInternal.DeferFunc("poe ReOpenWsClient")
 	for {
 		select {
 		case <-poe.wsReopenChan:
