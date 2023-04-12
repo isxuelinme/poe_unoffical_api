@@ -114,17 +114,17 @@ func (poe *PoeGPT) SetParentMessageID(parentMessageID string) {
 func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessage, error) {
 	//TODO implement me
 	log.Debug("new question:" + askRequest.Question)
-	type Variables struct {
-		Bot           string      `json:"bot"`
-		ChatID        int         `json:"chatId"`
-		Query         string      `json:"query"`
-		Source        interface{} `json:"source"`
-		WithChatBreak bool        `json:"withChatBreak"`
-	}
 	type Payload struct {
-		OperationName string    `json:"operationName"`
-		Query         string    `json:"query"`
-		Variables     Variables `json:"variables"`
+		QueryName string `json:"queryName"`
+		Variables struct {
+			ChatID        int         `json:"chatId"`
+			Bot           string      `json:"bot"`
+			Query         string      `json:"query"`
+			Source        interface{} `json:"source"`
+			WithChatBreak bool        `json:"withChatBreak"`
+			ClientNonce   string      `json:"clientNonce"`
+		} `json:"variables"`
+		Query string `json:"query"`
 	}
 
 	var payload Payload

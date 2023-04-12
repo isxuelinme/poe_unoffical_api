@@ -2,15 +2,16 @@ package core
 
 var payLoadForTalk = `
 	{
-  "operationName": "AddHumanMessageMutation",
-  "query": "mutation AddHumanMessageMutation($chatId: BigInt!, $bot: String!, $query: String!, $source: MessageSource, $withChatBreak: Boolean! = false) {\n  messageEdgeCreate(\n    chatId: $chatId\n    bot: $bot\n    query: $query\n    source: $source\n    withChatBreak: $withChatBreak\n  ) {\n    __typename\n    message {\n      __typename\n      node {\n        __typename\n        ...MessageFragment\n        chat {\n          __typename\n          id\n          shouldShowDisclaimer\n        }\n      }\n    }\n    chatBreak {\n      __typename\n      node {\n        __typename\n        ...MessageFragment\n      }\n    }\n  }\n}\nfragment MessageFragment on Message {\n  id\n  __typename\n  messageId\n  text\n  linkifiedText\n  authorNickname\n  state\n  vote\n  voteReason\n  creationTime\n  suggestedReplies\n}",
-  "variables": {
-    "bot": "capybara",
-    "chatId": 550922,
-    "query": "现在还记得吗？\n",
-    "source": null,
-    "withChatBreak": false
-  }
+	"queryName": "chatHelpers_sendMessageMutation_Mutation",
+	"variables": {
+		"chatId": 523922,
+		"bot": "capybara",
+		"query": "hi",
+		"source": null,
+		"withChatBreak": false,
+		"clientNonce": "QaC49itisbotTKU6"
+	},
+	"query": "mutation chatHelpers_sendMessageMutation_Mutation(\n  $chatId: BigInt!\n  $bot: String!\n  $query: String!\n  $source: MessageSource\n  $withChatBreak: Boolean!\n  $clientNonce: String\n) {\n  messageEdgeCreate(chatId: $chatId, bot: $bot, query: $query, source: $source, withChatBreak: $withChatBreak, clientNonce: $clientNonce) {\n    chatBreak {\n      cursor\n      node {\n        id\n        messageId\n        text\n        author\n        suggestedReplies\n        creationTime\n        state\n      }\n      id\n    }\n    message {\n      cursor\n      node {\n        id\n        messageId\n        text\n        author\n        suggestedReplies\n        creationTime\n        state\n        clientNonce\n        chat {\n          shouldShowDisclaimer\n          id\n        }\n      }\n      id\n    }\n  }\n}\n"
 }
 `
 
