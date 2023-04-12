@@ -4,8 +4,8 @@ github.com/gorilla/websocket v1.5.0 h1:PPwGk2jz7EePpoHN/+ClbZu8SPxiqlu12wZP/3sWm
 github.com/gorilla/websocket v1.5.0/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/inancgumus/screen v0.0.0-20190314163918-06e984b86ed3 h1:fO9A67/izFYFYky7l1pDP5Dr0BTCRkaQJUG6Jm5ehsk=
 github.com/inancgumus/screen v0.0.0-20190314163918-06e984b86ed3/go.mod h1:Ey4uAp+LvIl+s5jRbOHLcZpUDnkjLBROl15fZLwPlTM=
-github.com/isxuelinme/poe_unoffical_api v1.2.2 h1:MDdbMg20Bp0yp8hgQwc4TadcJr83M4PejR3/XJV6Lbg=
-github.com/isxuelinme/poe_unoffical_api v1.2.2/go.mod h1:opt6ogAUnvPtQT3NOnx4lhElmweaEryHqtdNF2+kbWg=
+github.com/isxuelinme/poe_unoffical_api v1.2.6 h1:jcipVd6GoTKANvwP+zRFZ+TIpzJcky99R/zKzDt1fq8=
+github.com/isxuelinme/poe_unoffical_api v1.2.6/go.mod h1:opt6ogAUnvPtQT3NOnx4lhElmweaEryHqtdNF2+kbWg=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
 golang.org/x/crypto v0.7.0 h1:AvwMYaRytfdeVt3u6mLaxYtErKYjxA2OXjJ1HHq6t3A=

@@ -131,6 +131,7 @@ func (poe *PoeGPT) Talk(ctx context.Context, askRequest *AskRequest) (*GptMessag
 
 	json.Unmarshal([]byte(payLoadForTalk), &payload)
 
+	payload.Variables.Bot = os.Getenv("POE_BOT_MODEL")
 	payload.Variables.ChatID, _ = strconv.Atoi(os.Getenv("POE_CHAT_ID"))
 	payload.Variables.Query = askRequest.Question
 

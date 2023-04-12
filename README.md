@@ -22,10 +22,10 @@ go mod tidy
 ## Run the following code on your Chrome console
 
 ```javascript
-function getChatId() {
+function getChatId(botName) {
     let channel = localStorage.getItem("poe-tchannel-channel")
     let paramsForGetChatId = window.__NEXT_DATA__.buildId
-    let fetchUrl = "https://poe.com/_next/data/" + paramsForGetChatId + "/sage.json?handle=sage"
+    let fetchUrl = "https://poe.com/_next/data/" + paramsForGetChatId + "/"+botName+".json?handle="+botName
     fetch(fetchUrl)
         .then(response => {
             if (!response.ok) {
@@ -35,27 +35,31 @@ function getChatId() {
         })
         .then(data => {
             jsonData = JSON.parse(data)
-            console.log("POE_CHANNEL = ", channel)
-            console.log("POE_CHAT_ID = ", jsonData.pageProps.payload.chatOfBotDisplayName.chatId)
+            let output = "POE_BOT_NAME = " + botName + "\n"+ "POE_BOT_MODEL = " + jsonData.pageProps.payload.chatOfBotDisplayName.defaultBotObject.model + "\n"+ "POE_CHANNEL = " + channel + "\n" + "POE_CHAT_ID = " + jsonData.pageProps.payload.chatOfBotDisplayName.chatId
+            console.log(output)
         })
         .catch(error => {
             console.error('Error fetching data:', error);
         });
-}(getChatId())
+}(getChatId("Sage"))
 ```
 
 ## Copy the value of POE_CHANNEL and POE_CHAT_ID after running the above code. The output will look like this:
 
 ```dotenv
-POE_CHANNEL =  poe-chan51-8888-hhmp2zuksgonnzdwnitj
-POE_CHAT_ID =  550223
+POE_BOT_NAME = Sage
+POE_BOT_MODEL = capybara
+POE_CHANNEL = poe-chan51-8888-hqqqqzuksgonnzdwnitj
+POE_CHAT_ID = 530922
 ```
 
 ## Change .env.example name to .env and change the value of your cookie
 ```dotenv
 POE_COOKIE = <your cookie>
-POE_CHANNEL = <your channel>
-POE_CHAT_ID = <your chat_id>
+POE_BOT_NAME = <bot name>
+POE_BOT_MODEL = <bot model>
+POE_CHANNEL = <bot channel>
+POE_CHAT_ID = <bot chat id >
 ```
 ## if you wanna use SSE (default is CLI), ADD the following configuration to .env
 ```dotenv
