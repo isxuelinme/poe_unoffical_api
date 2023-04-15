@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -487,6 +488,9 @@ func (poe *PoeGPT) PoeRequest(httpMethod, urlStr string, body *bytes.Reader) (*h
 	if urlStr == "https://poe.com/api/gql_POST" {
 		headers.Add("poe-formkey", poe.setting.Formkey)
 		headers.Add("poe-tchannel", poe.setting.TchannelData.Channel)
+		bodyStr, _ := ioutil.ReadAll(body)
+		poeTagId := md5.Sum([]byte(string(bodyStr) + poe.setting.Formkey + "WpuLMiXEKKE98j56k"))
+		headers.Add("poe-tag-id", fmt.Sprintf("%x", poeTagId))
 	}
 	req.Header = headers
 	proxy := os.Getenv("HTTP_PROXY")

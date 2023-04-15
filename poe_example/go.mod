@@ -2,7 +2,7 @@ module poe_example
 
 go 1.20
 
-require github.com/isxuelinme/poe_unoffical_api v1.2.8
+require github.com/isxuelinme/poe_unoffical_api v1.2.9
 
 require (
 	github.com/alexandrevicenzi/go-sse v1.6.0 // indirect
